@@ -4,6 +4,8 @@
  * rename.js 以下是此脚本支持的参数，必须以 # 为开头多个参数使用"&"连接，参考上述地址为例使用参数。 禁用缓存url#noCache
  *
  *** 主要参数
+ * [rename=on] 启用保留参数 blkey、blgd、bl、nx、blnx、clear、blpx；默认关闭，也支持 rename=true。
+ * 前缀、地区识别、名称重建、分组编号及其他参数不受此开关影响，blockquic 独立生效。
  * [in=] 自动判断机场节点名类型 优先级 zh(中文) -> flag(国旗) -> quan(英文全称) -> en(英文简写)
  * 如果不准的情况, 可以加参数指定:
  *
@@ -29,7 +31,7 @@
  *** 保留参数
  * [blkey=iplc+gpt+NF+IPLC+网易云] 用+号添加多个关键词 保留节点名的自定义字段 需要区分大小写!
  * 如果需要修改 保留的关键词 替换成别的 可以用 > 分割 例如 [#blkey=GPT>新名字+其他关键词] 这将把【GPT】替换成【新名字】
- * 例如      https://raw.githubusercontent.com/Keywos/rule/main/rename.js#flag&blkey=GPT>新名字+NF
+ * 例如      https://raw.githubusercontent.com/Keywos/rule/main/rename.js#rename=on&flag&blkey=GPT>新名字+NF
  * [blgd]   保留: NetEase Music、家宽、IPLC、ˣ² 等节点
  * [bl]     正则匹配保留 [0.1x, x0.2, 6x ,3倍]等标识
  * [nx]     保留1倍率与不显示倍率的
@@ -41,23 +43,24 @@
 
 // const inArg = {'blkey':'iplc+GPT>GPTnewName+NF+IPLC', 'flag':true };
 const inArg = $arguments; // console.log(inArg)
-const nx = inArg.nx || false,
-  bl = inArg.bl || false,
+const rename = inArg.rename === true || inArg.rename === "true" || inArg.rename === "on",
+  nx = rename && (inArg.nx || false),
+  bl = rename && (inArg.bl || false),
   nf = inArg.nf || false,
   key = inArg.key || false,
-  blgd = inArg.blgd || false,
-  blpx = inArg.blpx || false,
-  blnx = inArg.blnx || false,
+  blgd = rename && (inArg.blgd || false),
+  blpx = rename && (inArg.blpx || false),
+  blnx = rename && (inArg.blnx || false),
   numone = inArg.one || false,
   debug = inArg.debug || false,
-  clear = inArg.clear || false,
+  clear = rename && (inArg.clear || false),
   addflag = inArg.flag || false,
   nm = inArg.nm || false;
 
 const FGF = inArg.fgf == undefined ? " " : decodeURI(inArg.fgf),
   XHFGF = inArg.sn == undefined ? " " : decodeURI(inArg.sn),
   FNAME = inArg.name == undefined ? "" : decodeURI(inArg.name),
-  BLKEY = inArg.blkey == undefined ? "" : decodeURI(inArg.blkey),
+  BLKEY = !rename || inArg.blkey == undefined ? "" : decodeURI(inArg.blkey),
   blockquic = inArg.blockquic == undefined ? "" : decodeURI(inArg.blockquic),
   nameMap = {
     cn: "cn",
@@ -142,6 +145,15 @@ function ObjKA(i) {
 }
 
 function operator(pro) {
+  pro.forEach((e) => {
+    if (blockquic == "on") {
+      e["block-quic"] = "on";
+    } else if (blockquic == "off") {
+      e["block-quic"] = "off";
+    } else {
+      delete e["block-quic"];
+    }
+  });
   const Allmap = {};
   const outList = getList(outputName);
   let inputList,
@@ -204,14 +216,6 @@ function operator(pro) {
         }
       }
     });
-    if (blockquic == "on") {
-      e["block-quic"] = "on";
-    } else if (blockquic == "off") {
-      e["block-quic"] = "off";
-    } else {
-      delete e["block-quic"];
-    }
-
     // 自定义
     if (!bktf && BLKEY) {
       let BLKEY_REPLACE = "",
