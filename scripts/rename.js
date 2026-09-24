@@ -36,7 +36,7 @@
  * [bl]     正则匹配保留 [0.1x, x0.2, 6x ,3倍]等标识
  * [nx]     保留1倍率与不显示倍率的
  * [blnx]   只保留高倍率
- * [clear]  清理乱名
+ * [clear]  默认开启，按名称过滤流量、到期等提示节点；clear=off 或 clear=false 关闭，不受 rename 影响
  * [blpx]   如果用了上面的bl参数,对保留标识后的名称分组排序,如果没用上面的bl参数单独使用blpx则不起任何作用
  * [blockquic] blockquic=on 阻止; blockquic=off 不阻止
  */
@@ -53,7 +53,7 @@ const rename = inArg.rename === true || inArg.rename === "true" || inArg.rename 
   blnx = inArg.blnx || false,
   numone = inArg.one || false,
   debug = inArg.debug || false,
-  clear = inArg.clear || false,
+  clear = inArg.clear !== false && inArg.clear !== "false" && inArg.clear !== "off",
   addflag = inArg.flag || false,
   nm = inArg.nm || false;
 
