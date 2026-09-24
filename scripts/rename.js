@@ -4,8 +4,8 @@
  * rename.js 以下是此脚本支持的参数，必须以 # 为开头多个参数使用"&"连接，参考上述地址为例使用参数。 禁用缓存url#noCache
  *
  *** 主要参数
- * [rename=on] 启用保留参数 blkey、blgd、bl、nx、blnx、clear、blpx；默认关闭，也支持 rename=true。
- * 前缀、地区识别、名称重建、分组编号及其他参数不受此开关影响，blockquic 独立生效。
+ * [rename=on] 按地区重建名称并分组编号；默认关闭，保留原名称内容和序号，也支持 rename=true。
+ * 前缀、国旗、保留参数、筛选排序和 blockquic 独立生效；原名模式不重复追加已有标签，blkey 的 > 替换直接作用于原名。
  * [in=] 自动判断机场节点名类型 优先级 zh(中文) -> flag(国旗) -> quan(英文全称) -> en(英文简写)
  * 如果不准的情况, 可以加参数指定:
  *
@@ -44,23 +44,23 @@
 // const inArg = {'blkey':'iplc+GPT>GPTnewName+NF+IPLC', 'flag':true };
 const inArg = $arguments; // console.log(inArg)
 const rename = inArg.rename === true || inArg.rename === "true" || inArg.rename === "on",
-  nx = rename && (inArg.nx || false),
-  bl = rename && (inArg.bl || false),
+  nx = inArg.nx || false,
+  bl = inArg.bl || false,
   nf = inArg.nf || false,
   key = inArg.key || false,
-  blgd = rename && (inArg.blgd || false),
-  blpx = rename && (inArg.blpx || false),
-  blnx = rename && (inArg.blnx || false),
+  blgd = inArg.blgd || false,
+  blpx = inArg.blpx || false,
+  blnx = inArg.blnx || false,
   numone = inArg.one || false,
   debug = inArg.debug || false,
-  clear = rename && (inArg.clear || false),
+  clear = inArg.clear || false,
   addflag = inArg.flag || false,
   nm = inArg.nm || false;
 
 const FGF = inArg.fgf == undefined ? " " : decodeURI(inArg.fgf),
   XHFGF = inArg.sn == undefined ? " " : decodeURI(inArg.sn),
   FNAME = inArg.name == undefined ? "" : decodeURI(inArg.name),
-  BLKEY = !rename || inArg.blkey == undefined ? "" : decodeURI(inArg.blkey),
+  BLKEY = inArg.blkey == undefined ? "" : decodeURI(inArg.blkey),
   blockquic = inArg.blockquic == undefined ? "" : decodeURI(inArg.blockquic),
   nameMap = {
     cn: "cn",
@@ -185,6 +185,36 @@ function operator(pro) {
   const BLKEYS = BLKEY ? BLKEY.split("+") : "";
 
   pro.forEach((e) => {
+    if (!rename) {
+      let originalName = e.name,
+        usflag = "";
+      if (BLKEY) {
+        BLKEYS.forEach((item) => {
+          const [keyword, replacement] = item.split(">");
+          if (keyword && replacement) {
+            originalName = originalName.split(keyword).join(replacement);
+          }
+        });
+      }
+      if (addflag) {
+        const existingFlag = originalName.match(/[🇦-🇿]{2}/u);
+        if (existingFlag) {
+          usflag = existingFlag[0];
+          originalName = originalName.replace(usflag, "").trimStart();
+        } else {
+          let regionName = originalName;
+          Object.keys(rurekey).forEach((ikey) => {
+            regionName = regionName.replace(rurekey[ikey], ikey);
+          });
+          const region = Object.entries(Allmap).find(([key]) => regionName.includes(key));
+          usflag = region ? FG[outList.indexOf(region[1])] : "🇨🇳";
+        }
+      }
+      e.name = (nf ? [FNAME, usflag, originalName] : [usflag, FNAME, originalName])
+        .filter((part) => part !== "")
+        .join(FGF);
+      return;
+    }
     let bktf = false,
       ens = e.name;
     // 预处理 防止预判或遗漏
@@ -301,8 +331,10 @@ function operator(pro) {
     }
   });
   pro = pro.filter((e) => e.name !== null);
-  jxh(pro);
-  numone && oneP(pro);
+  if (rename) {
+    jxh(pro);
+    numone && oneP(pro);
+  }
   blpx && (pro = fampx(pro));
   key && (pro = pro.filter((e) => !keyb.test(e.name)));
   return pro;
